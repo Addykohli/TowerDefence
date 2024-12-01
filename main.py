@@ -1023,7 +1023,7 @@ def show_start_screen(screen, prompt):
         pygame.draw.rect(prompt_surf, (*(prompt_color), 210), prompt_surf.get_rect(),
                      border_radius=border_radius)
         screen.blit(prompt_surf, (screen_size[0]/2 - 200, screen_size[1] / 2 - 150 ))
-        screen.blit(font.render("Nothing to see here", True, (200, 200, 200)), (screen_size[0]/2 - 130, screen_size[1] / 2 - 30 ))
+        screen.blit(font.render("Nothing to see here :/", True, (200, 200, 200)), (screen_size[0]/2 - 130, screen_size[1] / 2 - 30 ))
     pygame.display.flip()
 
     stage1_button_rect = pygame.Rect(stage1_button_pos, (button_width, button_height))
@@ -1128,7 +1128,7 @@ def show_lose_screen(screen, prompt):
         pygame.draw.rect(prompt_surf, (*(prompt_color), 210), prompt_surf.get_rect(),
                      border_radius=border_radius)
         screen.blit(prompt_surf, (screen_size[0]/2 - 200, screen_size[1] / 2 - 150 ))
-        screen.blit(font.render("Nothing to see here", True, (200, 200, 200)), (screen_size[0]/2 - 130, screen_size[1] / 2 - 30 ))
+        screen.blit(font.render("Nothing to see here :/", True, (200, 200, 200)), (screen_size[0]/2 - 130, screen_size[1] / 2 - 30 ))
     pygame.display.flip()
 
     stage1_button_rect = pygame.Rect(stage1_button_pos, (button_width, button_height))
@@ -1233,7 +1233,7 @@ def show_win_screen(screen, prompt):
         pygame.draw.rect(prompt_surf, (*(prompt_color), 210), prompt_surf.get_rect(),
                      border_radius=border_radius)
         screen.blit(prompt_surf, (screen_size[0]/2 - 200, screen_size[1] / 2 - 150 ))
-        screen.blit(font.render("Nothing to see here", True, (200, 200, 200)), (screen_size[0]/2 - 130, screen_size[1] / 2 - 30 ))
+        screen.blit(font.render("Nothing to see here :/", True, (200, 200, 200)), (screen_size[0]/2 - 130, screen_size[1] / 2 - 30 ))
     pygame.display.flip()
 
     stage1_button_rect = pygame.Rect(stage1_button_pos, (button_width, button_height))
@@ -1263,6 +1263,10 @@ def get_stage(num, is_endless):
     stage3 = Stage(waves=[constants.wave3_1, constants.wave3_2, constants.wave3_3, constants.wave3_4, constants.wave3_5, constants.wave3_6, constants.wave3_7], bg_img=load_and_scale_bg('assets/bgg3.png',
                           constants.MAP_WIDTH * constants.TILE_SIZE, constants.MAP_HEIGHT * constants.TILE_SIZE),
                    mapfile='assets/map3.csv', screen=screen, stage_health=9000, starting_money= 15000, overlay_path= 'assets/bgg3_overlay.png', is_endless = is_endless)
+
+    stage1 = Stage(waves=[constants.wave1_1], 
+                          bg_img=load_and_scale_bg('assets/bgg.png', constants.MAP_WIDTH * constants.TILE_SIZE, constants.MAP_HEIGHT * constants.TILE_SIZE),
+                   mapfile='assets/map.csv', screen=screen, stage_health=5500, starting_money=6000, overlay_path= 'assets/bgg_overlay.png', is_endless = is_endless)
 
     if num == 1:
         return stage1
