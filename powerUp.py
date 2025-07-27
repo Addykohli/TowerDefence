@@ -43,7 +43,7 @@ class aid(powerUp):
     def applyEffect(self, stage):
         if stage.paused:
             return
-        stage.stage_health += 20
+        stage.stage_health += 50
         stage.powerUps.remove(self)
         stage.used_powerUps.append(self)
         self.used_time = pygame.time.get_ticks()

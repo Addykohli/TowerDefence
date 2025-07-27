@@ -25,7 +25,7 @@ class Monster:
         self.image = self.original_image
         self.isFrozen = False
         self.kill_money_time = None
-        self.kill_money_text = pygame.font.Font(None, 18).render(f' +${self.kill_money}', True, (200, 200, 0))
+        self.kill_money_text = pygame.font.Font(None, 21).render(f' +${self.kill_money}', True, (200, 200, 0))
         self.did_exit = False
         self.isBlip = False
 
@@ -85,7 +85,7 @@ class Monster:
     def draw_health_bar(self, screen):
         health_bar_width = constants.TILE_SIZE
         health_bar_height = 4
-        health_ratio = self.health / self.initHealth
+        health_ratio = min(self.health / self.initHealth, 1.0)
         health_bar_color = (255, 0, 0)
         pygame.draw.rect(screen, (255, 255, 255), (self.rect.x, self.rect.y - 10, health_bar_width, health_bar_height))
         pygame.draw.rect(screen, health_bar_color, (self.rect.x, self.rect.y - 10, health_bar_width * health_ratio, health_bar_height))
@@ -104,8 +104,9 @@ class Monster:
                 stage.add_powerUp((self.x, self.y))
 
     def freeze(self, ratio, duration, game_speed):
-        if not self.isFrozen:
-            self.speed *= ratio
+        newSpeed = self.speed * ratio
+        if newSpeed < self.speed:
+            self.speed = newSpeed
         self.isFrozen = True
         self.freeze_end_time = pygame.time.get_ticks() + duration / game_speed 
         self.image = self.freeze_img

@@ -9,8 +9,7 @@ class B_Projectile:
         self.y = y
         self.target = target
         self.angle = angle
-        self.image = pygame.image.load('assets/rocket_anim.png')
-        self.image = pygame.transform.scale(self.image, (self.image.get_width()/1.1, self.image.get_height()/1.25))  # Adjust the size as needed
+        self.image = pygame.transform.scale(pygame.image.load('assets/blaster_anim.png'), (25, 47))
         self.tx = self.target.x
         self.ty = self.target.y
         self.turr = turr

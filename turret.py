@@ -32,6 +32,7 @@ class Turret:
         self.is_blown = False
         self.last_up_time = self.upgraded_time
         self.pause_while_upgrading = 0
+        self.stage = None 
     def find_target(self, monsters):
         if not monsters:
             return None
@@ -65,7 +66,7 @@ class Turret:
 
             self.box_height = 0  # Reset the height to 0 when shooting
             self.box_growth_start_time = current_time  # Start timing the growth
-            print('shooting super class')
+
 
     def upgrade(self, stage):
         if stage.checkMoney() >= self.upgrade_cost:
@@ -75,7 +76,7 @@ class Turret:
             self.level += 1
             self.box_height = 0
             if self.damage:
-                self.damage += self.damage * 0.12
+                self.damage += self.damage * 0.25
             if self.level < 6:
                 self.range += self.range * 0.05
                 if self.hit_speed:
@@ -191,6 +192,8 @@ class Cannon(Turret):
         if self.target and current_time - self.last_shot_time >= self.hit_speed * 1000 / game_speed:
             self.last_shot_time = current_time
             self.target.health -= self.damage
+            if self.stage:
+                self.stage.total_damage_done += self.damage
             angle_rad = math.radians(self.angle)
             projectile = animations.C_Projectile(self.x * constants.TILE_SIZE + constants.TILE_SIZE/2 + (15 * math.cos(angle_rad)) ,
                                     self.y * constants.TILE_SIZE + constants.TILE_SIZE/2 + (15 * -math.sin(angle_rad)) ,
@@ -269,6 +272,8 @@ class Blaster(Turret):
 
     def damage_target(self, target):
         target.health -= self.damage
+        if self.stage:
+            self.stage.total_damage_done += self.damage
 
     def update_projectiles(self, screen):
         # Update and draw each projectile
@@ -520,7 +525,8 @@ class Tesla(Turret):
         self.air_attack = True
         self.ground_attack = True
         self.image = pygame.image.load('assets/tesla.png')
-        self.shooting_animation = pygame.image.load('assets/tesla_anim.png') 
+        self.shooting_animation = pygame.image.load('assets/tesla_anim.png')
+        self.shooting_animation_up5 = pygame.image.load('assets/tesla_anim_up5.png') 
         self.shooting_start_time = 0 
         self.up3_image = pygame.transform.scale(pygame.image.load('assets/tesla_up3.png'),
                                                 (self.image.get_width(), self.image.get_height()))
@@ -558,10 +564,14 @@ class Tesla(Turret):
         if self.shooting_start_time > 0:
             elapsed_time = pygame.time.get_ticks() - self.shooting_start_time
             if elapsed_time < 120:
-                screen.blit(self.shooting_animation,
-                            (self.x * constants.TILE_SIZE - 133/3,
-                             self.y * constants.TILE_SIZE - 104/3))
-            else:
+                if self.level < 4:
+                    screen.blit(self.shooting_animation,
+                                (self.x * constants.TILE_SIZE - 133/3,
+                                 self.y * constants.TILE_SIZE - 104/3))
+                else:
+                    screen.blit(self.shooting_animation_up5,
+                                (self.x * constants.TILE_SIZE - 133/3,
+                                 self.y * constants.TILE_SIZE - 104/3))
                 self.shooting_start_time = 0 
         self.draw_level(screen)
 
@@ -591,13 +601,15 @@ class Laser(Turret):
         self.update_box(current_time, game_speed)
         monsters_in_range = [monster for monster in monsters if self.in_range(monster)]
 
-        max_targets = 4 + self.level
+        max_targets = 5 + (2 * self.level)
         self.monsters_to_attack = monsters_in_range[:max_targets]  # Get the first 4 monsters in range
 
         if self.monsters_to_attack and current_time - self.last_hit_time >= self.hit_interval * 1000 / game_speed:
             for monster in self.monsters_to_attack:
                 if not monster.isBlip:
                     monster.health -= self.damage
+                    if self.stage:
+                        self.stage.total_damage_done += self.damage
             self.last_hit_time = current_time
             self.box_height = 0  
             self.box_growth_start_time = current_time  
@@ -618,14 +630,15 @@ class Laser(Turret):
 
         for monster in self.monsters_to_attack:
             if monster and not self.under_upgrade:  
-                pygame.draw.line(screen, (255, 0, 0),  
+                line_color = (245, 11, 250) if self.level >= 4 else (255, 0, 0)
+                pygame.draw.line(screen, line_color,  
                                  (self.x * constants.TILE_SIZE + constants.TILE_SIZE/2 +2,
-                                          self.y * constants.TILE_SIZE +constants.TILE_SIZE/2 +4),  
+                                          self.y * constants.TILE_SIZE +constants.TILE_SIZE/2-1),  
                                  (monster.x * constants.TILE_SIZE+ constants.TILE_SIZE/2,
                                           monster.y * constants.TILE_SIZE+ constants.TILE_SIZE/2), 3)  
                 pygame.draw.line(screen, (255, 255, 255), 
                                  (self.x * constants.TILE_SIZE + constants.TILE_SIZE / 2+2,
-                                  self.y * constants.TILE_SIZE + constants.TILE_SIZE / 2 +4),
+                                  self.y * constants.TILE_SIZE + constants.TILE_SIZE / 2-1),
                                  (monster.x * constants.TILE_SIZE + constants.TILE_SIZE / 2,
                                   monster.y * constants.TILE_SIZE + constants.TILE_SIZE / 2), 1)  
 
@@ -661,7 +674,7 @@ class Freezer(Turret):
                 if self.level <=4:
                     freeze_speed_ratio = 0.6 - self.level*0.05
                 else:
-                    freeze_speed_ratio = 0.6 - self.level*0.001
+                    freeze_speed_ratio = 0.35 - self.level*0.01
                 monster.freeze(freeze_speed_ratio, self.hit_interval*10000, game_speed)
             self.last_hit_time = current_time
             self.shooting_start_time = current_time
@@ -803,9 +816,8 @@ class FloorBurn:  # class for BurstFlame explosions
         distance = math.hypot(monster.x - self.x/constants.TILE_SIZE, monster.y - self.y/constants.TILE_SIZE)
         if monster.isBlip:
             return False
-        print(monster.x, monster.y, self.x, self.y, distance)
         return distance <= self.range
-    def inRange(self, monster):
+    def isColliding(self, monster):
         if self.rect.colliderect(monster.rect):
             return True
     def flip_image(self):
@@ -818,7 +830,7 @@ class FloorBurn:  # class for BurstFlame explosions
         if current_time >= self.last_flip + 250/game_speed:
             self.flip_image()
             self.last_flip = current_time
-        monsters_in_range = [monster for monster in monsters if self.inRange(monster)]
+        monsters_in_range = [monster for monster in monsters if self.isColliding(monster)]
 
         if monsters_in_range and current_time - self.last_hit_time >= self.hit_interval * 1000 / game_speed:
             for monster in monsters_in_range:

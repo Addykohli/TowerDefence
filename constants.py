@@ -8,15 +8,15 @@ FPS = 90
 
 mon_A_health =60
 mon_A_speed =0.6
-mon_A_kill_money = 25
+mon_A_kill_money = 45
 
 mon_B_health = 300
 mon_B_speed = .65
-mon_B_kill_money = 225
+mon_B_kill_money = 275
 
 mon_C_health = 200
 mon_C_speed = .54
-mon_C_kill_money = 200
+mon_C_kill_money = 250
 
 mon_d_health = 75
 mon_d_speed = .7
@@ -28,7 +28,7 @@ mon_e_kill_money = 500
 
 mon_F_health = 400
 mon_F_speed = .5
-mon_F_kill_money = 300
+mon_F_kill_money = 375
 
 mon_G_health = 8000
 mon_G_speed = .5
@@ -36,30 +36,30 @@ mon_G_kill_money = 3000
 
 mon_h_health = 170
 mon_h_speed = .7
-mon_h_kill_money = 300
+mon_h_kill_money = 350
 
 mon_I_health = 550
 mon_I_speed = .42
 mon_I_kill_money = 450
 
-MINIGUN_DAMAGE = 0.95  # Using the same as default turret
+MINIGUN_DAMAGE = 0.95  
 MINIGUN_HIT_SPEED = 1700 /10000
 MINIGUN_RANGE = 7
-MINIGUN_COST = 200  # Keep same cost as the current turret
+MINIGUN_COST = 200  
 
 CANNON_DAMAGE = 35
-CANNON_HIT_SPEED = 33000 /10000  # Seconds
-CANNON_RANGE = 7.5  # Tiles
+CANNON_HIT_SPEED = 33000 /10000  
+CANNON_RANGE = 7.5 
 CANNON_COST = 300
 
 BLASTER_DAMAGE = 24
-BLASTER_HIT_SPEED = 14500 /10000  # Seconds
-BLASTER_RANGE = 8  # Tiles
+BLASTER_HIT_SPEED = 14500 /10000 
+BLASTER_RANGE = 8  
 BLASTER_COST = 1000
 
-TESLA_DAMAGE = 2.3
-TESLA_HIT_SPEED = 4000 /10000
-TESLA_RANGE = 3.5
+TESLA_DAMAGE = 3.2
+TESLA_HIT_SPEED = 4500 /10000
+TESLA_RANGE = 3.9
 TESLA_COST = 1500
 
 HARPOON_DAMAGE = 85
@@ -68,12 +68,12 @@ HARPOON_RANGE = 13
 HARPOON_COST = 3000
 
 CRYOCANNON_DAMAGE = 55
-CRYOCANNON_HIT_SPEED = 52000 /10000  # Seconds
-CRYOCANNON_RANGE = 7.5  # Tiles
+CRYOCANNON_HIT_SPEED = 52000 /10000 
+CRYOCANNON_RANGE = 7.5 
 CRYOCANNON_COST = 3500
 
-LASER_DAMAGE = .4
-LASER_HIT_SPEED = 1000 /10000
+LASER_DAMAGE = .7
+LASER_HIT_SPEED = 600 /10000
 LASER_RANGE = 6
 LASER_COST = 3800
 
@@ -82,22 +82,22 @@ FREEZER_RANGE = 4.5
 FREEZER_COST = 3000
 
 FLAME_DAMAGE = 7
-FLAME_HIT_SPEED = 3600 /10000  # Seconds
-FLAME_RANGE = 4  # Tiles
+FLAME_HIT_SPEED = 3600 /10000  
+FLAME_RANGE = 4.3  
 FLAME_COST = 4500
 
 BURST_DAMAGE = 4
-BURST_HIT_SPEED = 50000 /10000  # Seconds
-BURST_RANGE = 7  # Tiles
+BURST_HIT_SPEED = 50000 /10000 
+BURST_RANGE = 7  
 BURST_COST = 5000
 
 MINE_DAMAGE = 80
-MINE_RANGE = 3.6 # Tiles
+MINE_RANGE = 3.6 
 MINE_COST = 75
 
 FROSTCANNON_DAMAGE = 45
-FROSTCANNON_HIT_SPEED = 52000 /10000  # Seconds
-FROSTCANNON_RANGE = 7.5  # Tiles
+FROSTCANNON_HIT_SPEED = 52000 /10000 
+FROSTCANNON_RANGE = 7.5 
 FROSTCANNON_COST = 6000
 
 STATUS_BAR_HEIGHT = 70

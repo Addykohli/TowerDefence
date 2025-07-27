@@ -62,8 +62,8 @@ class Wave:
         self.monsters = []
         self.last_spawn_time = pygame.time.get_ticks()
         self.monsters_spawned = 0
-        self.current_tuple_index = 0  # To track which monster type we're spawning
-        self.spawn_count = 0  # To track how many monsters of the current type have been spawned
+        self.current_tuple_index = 0 
+        self.spawn_count = 0  
         self.all_dead = False
         self.dead_list = []
         self.blip_count = 10
@@ -152,8 +152,21 @@ def draw_game(screen, nodes, wave, menu=None, up_menu=None, bg_image=None, curr_
         bg_surface =  pygame.Surface((constants.MAP_WIDTH * constants.TILE_SIZE, constants.MAP_HEIGHT * constants.TILE_SIZE),
                                         pygame.SRCALPHA)
         bg_surface.fill((0,0,0,94))
-
         screen.blit(bg_surface, (0, 0))
+        
+        # Draw pause menu overlay if game is paused
+        if curr_stage and curr_stage.paused:
+            overlay = pygame.Surface((screen.get_width(), screen.get_height()), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 180))  # Semi-transparent black
+            screen.blit(overlay, (0, 0))
+            
+            # Draw resume button
+            resume_button = pygame.Rect(screen.get_width()//2 - 75, screen.get_height()//2 - 25, 150, 50)
+            pygame.draw.rect(screen, (100, 200, 100), resume_button, border_radius=10)
+            font = pygame.font.Font(None, 36)
+            resume_text = font.render('Resume', True, (255, 255, 255))
+            screen.blit(resume_text, (screen.get_width()//2 - resume_text.get_width()//2, 
+                                    screen.get_height()//2 - resume_text.get_height()//2))
 
     for node in nodes:
         node.draw(screen)
@@ -181,11 +194,13 @@ def draw_game(screen, nodes, wave, menu=None, up_menu=None, bg_image=None, curr_
 
     # speed button surface
     speed_surface = pygame.Surface((60,48), pygame.SRCALPHA)
-    speed_surface.fill((0,0,0,220 - (curr_stage.game_speed*70)))
+    # Map game_speed to alpha: 1->150, 3->80, 5->30
+    speed_alpha = {1: 150, 3: 80, 5: 30}.get(curr_stage.game_speed, 150)
+    speed_surface.fill((0, 0, 0, speed_alpha))
 
     # pause button surface
     pause_surface = pygame.Surface((40, 48), pygame.SRCALPHA)
-    pause_surface.fill((0, 0, 0, 200))
+    pause_surface.fill((0, 0, 0, 220))
 
     # Draw money and player health 
     font = pygame.font.Font(None, 36)
@@ -258,6 +273,24 @@ def draw_game(screen, nodes, wave, menu=None, up_menu=None, bg_image=None, curr_
 
         if curr_stage.paused:
             screen.blit(pause_surface, pause_rect)
+
+            # Draw translucent overlay
+            overlay_width = 410
+            overlay_height = 150
+            overlay_surface = pygame.Surface((overlay_width, overlay_height), pygame.SRCALPHA)
+            overlay_surface.fill((0, 0, 0, 180))
+
+            font_big = pygame.font.Font(None, 42)
+            damage_text = font_big.render(f"Damage Done: {int(curr_stage.total_damage_done)}", True, (255, 255, 255))
+            money_text = font_big.render(f"Money Earned: ${int(curr_stage.total_money_earned)}", True, (255, 255, 255))
+
+            # Center overlay
+            screen_rect = screen.get_rect()
+            overlay_x = (screen_rect.width - overlay_width) // 2
+            overlay_y = (screen_rect.height - overlay_height) // 2
+            overlay_surface.blit(damage_text, ((overlay_width - damage_text.get_width()) // 2, 30))
+            overlay_surface.blit(money_text, ((overlay_width - money_text.get_width()) // 2, 80))
+            screen.blit(overlay_surface, (overlay_x, overlay_y))
 
         screen.blit(pygame.transform.scale(pygame.image.load('assets/exit_button.png'),(50,50)), exit_rect)
     pygame.display.flip()
@@ -698,7 +731,7 @@ def draw_upgrade_menu(screen, up_menu):
     up_stats_font = pygame.font.Font(None, 14)
     if up_menu['turret'].damage:
         damage_text = up_stats_font.render(f'damage: {up_menu['turret'].damage:.2f}', True, (255, 255, 0))
-        damage_up = up_stats_font.render(f'    +{up_menu['turret'].damage/10:.2f}', True, (0, 255, 0))
+        damage_up = up_stats_font.render(f'    +{up_menu['turret'].damage/4:.2f}', True, (0, 255, 0))
         screen.blit(damage_text, (turr_rect.topleft[0] + 59, turr_rect.topleft[1] + 5))
         screen.blit(damage_up, (turr_rect.topleft[0] + 122, turr_rect.topleft[1] + 5))
 
@@ -777,6 +810,8 @@ class Stage:
         self.used_powerUps = []
         self.anims = []
         self.paused_time = 0
+        self.total_damage_done = 0
+        self.total_money_earned = 0
 
     def next_wave(self):
         if self.curr_wave_index < len(self.waves_list)-1:
@@ -798,20 +833,35 @@ class Stage:
         rand_wave_mon_index = random.randint(0, len(self.waves_list)-1)
         rand_mon_list = self.waves_list[rand_wave_mon_index].monster_list
         stronger_mon_list = []
+        health_multiplier = 1.0 + 0.15 * ((self.curr_wave_index + 1 - len(self.waves_list)) // 5) if self.curr_wave_index + 1 > len(self.waves_list) else 1.0
         for group in rand_mon_list:
-            if group[0] =='D': #not increaaseing monster D count
+            if group[0] == 'D':
                 stronger_group = (group[0], group[1])
-            if group[0] =='G': #not increaaseing monster G count
+            elif group[0] == 'G':
                 stronger_group = (group[0], group[1])
             else:
-                stronger_group = (group[0], group[1]+self.curr_wave_index-len(self.waves_list))
-            if not group[0] == 'A': #monster A eliminated in endless waves
+                stronger_group = (group[0], group[1] + self.curr_wave_index - len(self.waves_list))
+            if not group[0] == 'A':
                 stronger_mon_list.append(stronger_group)
 
         spawn_delay = self.waves_list[rand_wave_mon_index].spawnDelay - (self.curr_wave_index-len(self.waves_list))*10
         if spawn_delay <= 300:
             spawn_delay = 300
-        return Wave(rand_path[0],rand_path[-1], rand_path, stronger_mon_list, spawn_delay)
+        wave = Wave(rand_path[0], rand_path[-1], rand_path, stronger_mon_list, spawn_delay)
+        wave._health_multiplier = health_multiplier
+        orig_spawn_monster = wave.spawn_monster
+        def spawn_monster_with_health_boost(stage):
+            orig_spawn_monster(stage)
+            if hasattr(wave, '_health_multiplier') and wave._health_multiplier > 1.0:
+                for mon in wave.monsters:
+                    if not hasattr(mon, '_health_scaled'):
+                        mon.health = int(mon.health * wave._health_multiplier)
+                        if not getattr(mon, 'isBlip', False):
+                            mon.health = int(mon.health * wave._health_multiplier)
+                        mon.initHealth = mon.health
+                        mon._health_scaled = True
+        wave.spawn_monster = spawn_monster_with_health_boost
+        return wave
 
     def update_powerUps(self):
         curr_time = pygame.time.get_ticks()
@@ -843,7 +893,9 @@ class Stage:
 
         if self.money >= cost:
             self.money -= cost
-            self.turrets.append(turret_class(node.x // constants.TILE_SIZE, node.y // constants.TILE_SIZE))
+            turr = turret_class(node.x // constants.TILE_SIZE, node.y // constants.TILE_SIZE)
+            turr.stage = self
+            self.turrets.append(turr)
 
     def remove_turret(self, given_turret):
         self.turrets.remove(given_turret)
@@ -853,6 +905,8 @@ class Stage:
 
     def add_money(self, amount):
         self.money += amount
+        if amount > 0:
+            self.total_money_earned += amount
 
     def subtract_health(self, amount):
         self.stage_health -= amount
@@ -862,13 +916,8 @@ class Stage:
             self.turrets = []
 
     def update_game_speed(self):
-        if self.game_speed == 1:
-            self.game_speed = 2
-        elif self.game_speed == 2:
-            self.game_speed = 3
-        else:
-            self.game_speed = 1
-
+        self.game_speed = [1, 3, 5][([1, 3, 5].index(self.game_speed) + 1) % 3]
+    
     def add_powerUp(self, pos):
         p = random.randint(1,4)
         if p == 4:
@@ -932,7 +981,7 @@ def show_starter(screen):
 
     return normal_rect, endless_rect
 
-def show_start_screen(screen, prompt):
+def show_start_screen(screen, prompt, settings_prompt):
     open_img = pygame.image.load('assets/open_menu.jpg')
 
     pygame.display.set_caption("Tower Defense Game - Select Stage")
@@ -1024,6 +1073,25 @@ def show_start_screen(screen, prompt):
                      border_radius=border_radius)
         screen.blit(prompt_surf, (screen_size[0]/2 - 200, screen_size[1] / 2 - 150 ))
         screen.blit(font.render("Nothing to see here :/", True, (200, 200, 200)), (screen_size[0]/2 - 130, screen_size[1] / 2 - 30 ))
+    
+    if settings_prompt:
+        bg_surface =  pygame.Surface((screen_size[0], screen_size[1]),
+                                        pygame.SRCALPHA)
+        bg_surface.fill((0,0,0,130))
+        screen.blit(bg_surface, (0, 0))
+        
+        # Draw settings panel
+        settings_panel = pygame.Surface((400, 300), pygame.SRCALPHA)
+        settings_panel.fill((50, 50, 70, 200))
+        screen.blit(settings_panel, (screen_size[0]//2 - 200, screen_size[1]//2 - 150))
+        
+        # Draw resume button
+        resume_button = pygame.Rect(screen_size[0]//2 - 75, screen_size[1]//2 - 50, 150, 50)
+        pygame.draw.rect(screen, (100, 200, 100), resume_button, border_radius=10)
+        font = pygame.font.SysFont(None, 36)
+        resume_text = font.render('Resume', True, (255, 255, 255))
+        screen.blit(resume_text, (screen_size[0]//2 - resume_text.get_width()//2, 
+                                screen_size[1]//2 - resume_text.get_height()//2))
     pygame.display.flip()
 
     stage1_button_rect = pygame.Rect(stage1_button_pos, (button_width, button_height))
@@ -1035,7 +1103,8 @@ def show_start_screen(screen, prompt):
     empty_rect2 = pygame.Rect(empty_pos2, (110, 110))
     empty_rect3 = pygame.Rect(empty_pos3, (110, 110))
 
-    return stage1_button_rect, stage2_button_rect, stage3_button_rect, choose_mode_rect, quit_rect, empty_rect, empty_rect2, empty_rect3
+    resume_rect = pygame.Rect(screen_size[0]//2 - 75, screen_size[1]//2 - 50, 150, 50)
+    return stage1_button_rect, stage2_button_rect, stage3_button_rect, choose_mode_rect, quit_rect, empty_rect, empty_rect2, empty_rect3, resume_rect
 
 def show_lose_screen(screen, prompt):
     open_img = pygame.image.load('assets/open_menu.jpg')
@@ -1258,15 +1327,11 @@ def get_stage(num, is_endless):
     stage2 = Stage(waves=[constants.wave2_1, constants.wave2_2, constants.wave2_3, constants.wave2_4, constants.wave2_5,
                           constants.wave2_6, constants.wave2_7, constants.wave2_8], bg_img=load_and_scale_bg('assets/bgg2.png',
                           constants.MAP_WIDTH * constants.TILE_SIZE, constants.MAP_HEIGHT * constants.TILE_SIZE),
-                   mapfile='assets/map2.csv', screen=screen, stage_health=7000, starting_money=9000, overlay_path= None, is_endless = is_endless)
+                   mapfile='assets/map2.csv', screen=screen, stage_health=9000, starting_money=15000, overlay_path= None, is_endless = is_endless)
     
     stage3 = Stage(waves=[constants.wave3_1, constants.wave3_2, constants.wave3_3, constants.wave3_4, constants.wave3_5, constants.wave3_6, constants.wave3_7], bg_img=load_and_scale_bg('assets/bgg3.png',
                           constants.MAP_WIDTH * constants.TILE_SIZE, constants.MAP_HEIGHT * constants.TILE_SIZE),
-                   mapfile='assets/map3.csv', screen=screen, stage_health=9000, starting_money= 15000, overlay_path= 'assets/bgg3_overlay.png', is_endless = is_endless)
-
-    stage1 = Stage(waves=[constants.wave1_1], 
-                          bg_img=load_and_scale_bg('assets/bgg.png', constants.MAP_WIDTH * constants.TILE_SIZE, constants.MAP_HEIGHT * constants.TILE_SIZE),
-                   mapfile='assets/map.csv', screen=screen, stage_health=5500, starting_money=6000, overlay_path= 'assets/bgg_overlay.png', is_endless = is_endless)
+                   mapfile='assets/map3.csv', screen=screen, stage_health=14000, starting_money= 25000, overlay_path= 'assets/bgg3_overlay.png', is_endless = is_endless)
 
     if num == 1:
         return stage1
@@ -1300,6 +1365,7 @@ def main_while(curr_stage): #game loop
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                #handle saving game
                 running = False
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:  
@@ -1312,11 +1378,14 @@ def main_while(curr_stage): #game loop
                             else:
                                 pause_duration = pygame.time.get_ticks() - pause_start_time
                                 curr_stage.paused_time = pause_duration
-                            print(curr_stage.paused_time)
                     if speed_rect.collidepoint(event.pos) and mouse_active:
                         curr_stage.update_game_speed()
 
                     if exit_rect.collidepoint(event.pos) and mouse_active:
+                        # Reset wave index so replay starts from wave 0 and clear all wave state
+                        for wave in curr_stage.waves_list:
+                            wave.refresh()
+                        curr_stage.curr_wave_index = 0
                         running = False
 
                     for pup in curr_stage.powerUps:
@@ -1434,23 +1503,35 @@ def main():  #screen Launcher
                     no_mode = False
     screen = pygame.display.set_mode((open_img.get_width(), open_img.get_height()))
     prompt = False
+    settings_prompt = False
     while not stage_selected:
-        stage1_button, stage2_button, stage3_button, choose_mode, quit_button, empty_button, empty_button2, empty_button3= show_start_screen(screen, prompt)
+        stage1_button, stage2_button, stage3_button, choose_mode, quit_button, empty_button, empty_button2, empty_button3, resume_rect= show_start_screen(screen, prompt, settings_prompt)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 return
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if empty_button.collidepoint(event.pos) or empty_button2.collidepoint(event.pos) or empty_button3.collidepoint(event.pos):
+                if empty_button2.collidepoint(event.pos) or empty_button3.collidepoint(event.pos):
                     prompt = not prompt
+                elif empty_button.collidepoint(event.pos):
+                    settings_prompt = not settings_prompt
                 elif stage1_button.collidepoint(event.pos) and not prompt:
                     current_stage = get_stage(1, endless)
+                    for wave in current_stage.waves_list:
+                        wave.refresh()
+                    current_stage.curr_wave_index = 0
                     stage_selected = True
                 elif stage2_button.collidepoint(event.pos) and not prompt:
                     current_stage = get_stage(2, endless)
+                    for wave in current_stage.waves_list:
+                        wave.refresh()
+                    current_stage.curr_wave_index = 0
                     stage_selected = True
                 elif stage3_button.collidepoint(event.pos) and not prompt:
                     current_stage = get_stage(3, endless)
+                    for wave in current_stage.waves_list:
+                        wave.refresh()
+                    current_stage.curr_wave_index = 0
                     stage_selected = True
                 elif choose_mode.collidepoint(event.pos) and not prompt:
                     reset_mode = True
@@ -1488,24 +1569,35 @@ def main():  #screen Launcher
             screen = pygame.display.set_mode((open_img.get_width(), open_img.get_height()))
 
         while not stage_selected or reset_mode:
-            stage1_button, stage2_button, stage3_button, choose_mode, quit_button, empty_button, empty_button2, empty_button3= show_start_screen(screen, prompt)
+            stage1_button, stage2_button, stage3_button, choose_mode, quit_button, empty_button, empty_button2, empty_button3, resume_rect= show_start_screen(screen, prompt, settings_prompt)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     return
                 elif event.type == pygame.MOUSEBUTTONDOWN:
-                    if empty_button.collidepoint(event.pos) or empty_button2.collidepoint(event.pos) or empty_button3.collidepoint(event.pos):
+                    if empty_button2.collidepoint(event.pos) or empty_button3.collidepoint(event.pos):
                         prompt = not prompt
+                    elif empty_button.collidepoint(event.pos):
+                        settings_prompt = not settings_prompt
                     elif stage1_button.collidepoint(event.pos) and not prompt:
                         current_stage = get_stage(1, endless)
+                        for wave in current_stage.waves_list:
+                            wave.refresh()
+                        current_stage.curr_wave_index = 0
                         stage_selected = True
                         reset_mode = False
                     elif stage2_button.collidepoint(event.pos) and not prompt:
                         current_stage = get_stage(2, endless)
+                        for wave in current_stage.waves_list:
+                            wave.refresh()
+                        current_stage.curr_wave_index = 0
                         stage_selected = True
                         reset_mode = False
                     elif stage3_button.collidepoint(event.pos) and not prompt:
                         current_stage = get_stage(3, endless)
+                        for wave in current_stage.waves_list:
+                            wave.refresh()
+                        current_stage.curr_wave_index = 0
                         stage_selected = True
                         reset_mode = False                        
                     elif choose_mode.collidepoint(event.pos) and not prompt:
@@ -1533,14 +1625,23 @@ def main():  #screen Launcher
                                 prompt = not prompt
                             elif stage1_button.collidepoint(event.pos) and not prompt:
                               current_stage = get_stage(1, endless)
+                              for wave in current_stage.waves_list:
+                                  wave.refresh()
+                              current_stage.curr_wave_index = 0
                               stage_selected = True
                               reset_mode = False
                             elif stage2_button.collidepoint(event.pos) and not prompt:
                                current_stage = get_stage(2, endless)
+                               for wave in current_stage.waves_list:
+                                   wave.refresh()
+                               current_stage.curr_wave_index = 0
                                stage_selected = True
                                reset_mode = False
                             elif stage3_button.collidepoint(event.pos) and not prompt:
                                 current_stage = get_stage(3, endless)
+                                for wave in current_stage.waves_list:
+                                    wave.refresh()
+                                current_stage.curr_wave_index = 0
                                 stage_selected = True
                                 reset_mode = False                        
                             elif choose_mode.collidepoint(event.pos) and not prompt:
@@ -1565,14 +1666,23 @@ def main():  #screen Launcher
                                 prompt = not prompt
                             elif stage1_button.collidepoint(event.pos) and not prompt:
                               current_stage = get_stage(1, endless)
+                              for wave in current_stage.waves_list:
+                                  wave.refresh()
+                              current_stage.curr_wave_index = 0
                               stage_selected = True
                               reset_mode = False
                             elif stage2_button.collidepoint(event.pos) and not prompt:
                                current_stage = get_stage(2, endless)
+                               for wave in current_stage.waves_list:
+                                   wave.refresh()
+                               current_stage.curr_wave_index = 0
                                stage_selected = True
                                reset_mode = False
                             elif stage3_button.collidepoint(event.pos) and not prompt:
                                 current_stage = get_stage(3, endless)
+                                for wave in current_stage.waves_list:
+                                    wave.refresh()
+                                current_stage.curr_wave_index = 0
                                 stage_selected = True
                                 reset_mode = False                        
                             elif choose_mode.collidepoint(event.pos) and not prompt:
